@@ -8,7 +8,127 @@ public class CompleteFeatureDemo {
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         // simpleTask();
-        serialTask();
+        // serialTask();
+        // andTask();
+        // orTask();
+        complexTask();
+    }
+
+    /**
+     * 多任务
+     */
+    private static void complexTask() throws ExecutionException, InterruptedException {
+        // 16. anyOf
+        CompletableFuture future16 = CompletableFuture.anyOf(CompletableFuture.supplyAsync(()->
+        {
+            sleep(30);
+            System.out.println("16.1 TaskA be called.");
+            return "16.2 TaskA return value.";
+        }), CompletableFuture.supplyAsync(()->{
+            sleep(10);
+            System.out.println("16.3 TaskB be called.");
+            return "16.4 TaskB return value.";
+        }));
+        System.out.println("16.5 get: " + future16.get());
+        sleep(40);
+
+        // 17. allOf
+        CompletableFuture<Void> future17 = CompletableFuture.allOf(CompletableFuture.supplyAsync(()->
+        {
+            sleep(30);
+            System.out.println("17.1 TaskA be called.");
+            return "17.2 TaskA return value.";
+        }), CompletableFuture.supplyAsync(()->{
+            sleep(10);
+            System.out.println("17.3 TaskB be called.");
+            return "17.4 TaskB return value.";
+        }));
+        System.out.println("17.5 get: " + future17.get()); // allOf 没有返回值
+    }
+
+    /**
+     * Or 汇聚关系
+     */
+    private static void orTask() throws ExecutionException, InterruptedException {
+        // 13. applyToEither 使用 A,B 两个异步任务优先返回的结果
+        CompletableFuture<String> future13 = CompletableFuture.supplyAsync(() -> {
+            sleep(20); // 虽然这个任务先执行，但是执行时间比下面的任务长，所以最后会使用下面的返回结果
+            System.out.println("13.1 "); // 用于证明拿到B的结果后，A还会继续执行，并不会终止
+            return "13.2 TaskA return value";
+        }).applyToEither(CompletableFuture.supplyAsync(() -> {
+            sleep(10);
+            return "13.3 TaskB return value";
+        }), (returnVal) -> returnVal);
+        System.out.println("13.4 get: " + future13.get());
+        sleep(30);
+
+        // 14. acceptEither 使用 A,B 两个异步任务优先返回的结果
+        CompletableFuture.supplyAsync(() -> {
+            sleep(20); // 虽然这个任务先执行，但是执行时间比下面的任务长，所以最后会使用下面的返回结果
+            return "14.1 TaskA return value";
+        }).acceptEither(CompletableFuture.supplyAsync(() -> {
+            sleep(10);
+            return "14.2 TaskB return value";
+        }), (returnVal) -> {
+            System.out.println(returnVal);
+        });
+        sleep(30);
+
+        // 15. runAfterEither A，B任意一个执行完后就执行C，C不关心前面任务的返回值
+        CompletableFuture.supplyAsync(()->{
+            sleep(20);  // 虽然这个任务先执行，但是执行时间比下面的任务长，所以最后会使用下面的返回结果
+            System.out.println("15.1 TaskA be called.");
+            return "15.2 TaskA return value";
+        }).runAfterEither(CompletableFuture.supplyAsync(()->{
+            sleep(10);
+            System.out.println("15.3 TaskB be called.");
+            return "15.4 TaskB return value";
+        }), () -> {
+            System.out.println("15.5 TaskC be called.");
+        });
+        sleep(30);
+    }
+
+    /**
+     * And 汇聚关系
+     */
+    private static void andTask() throws ExecutionException, InterruptedException {
+        // 10. thenCombine 合并结果
+        CompletableFuture<String> future10 = CompletableFuture.supplyAsync(() -> {
+            sleep(5);
+            return "10.1 TaskA return value ";
+        }).thenCombine(CompletableFuture.supplyAsync(() -> {
+            sleep(5);
+            return "10.2 TaskB return value";
+        }),(taskAReturnVal, taskBReturnVal) -> taskAReturnVal + taskBReturnVal);
+        System.out.println("10.3 get: " + future10.get());
+        sleep(10);
+
+        // 11. thenAcceptBoth
+        CompletableFuture.supplyAsync(() -> {
+            sleep(5);
+            return "11.1 TaskA return value ";
+        }).thenAcceptBoth(CompletableFuture.supplyAsync(() -> {
+            sleep(5);
+            return "11.2 TaskB return value";
+        }),(taskAReturnVal, taskBReturnVal) -> {
+            System.out.println(taskAReturnVal + taskBReturnVal);
+        });
+        sleep(10);
+
+        // 12. runAfterBoth A，B 都执行完后才执行 C，C 不关心前面任务的返回值
+        CompletableFuture.supplyAsync(() -> {
+            sleep(20); // 虽然这个任务先执行，但是执行时间比下面的任务长，所以最后会使用下面的返回结果
+            System.out.println("12.1 TaskA be called.");
+            return "12.2 TaskA return value";
+        }).runAfterBoth(CompletableFuture.supplyAsync(() -> {
+            sleep(10);
+            System.out.println("12.3 TaskB be called.");
+            return "12.4 TaskB return value";
+        }), () -> {
+            System.out.println("12.5 TaskC be called.");
+        });
+        sleep(30);
     }
 
     /**
@@ -97,6 +217,7 @@ public class CompleteFeatureDemo {
         System.out.println("9.6 get: " + future9.get());
         sleep(10);
     }
+
 
     private static void simpleTask() throws InterruptedException, ExecutionException {
         // 1. runAsync 执行一个异步任务，没有返回值
